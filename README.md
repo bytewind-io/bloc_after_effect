@@ -1,6 +1,6 @@
-# effect_bloc
+# bloc_after_effect
 
-An extension of [bloc](https://pub.dev/packages/bloc) that adds a one-shot UI effect stream alongside state — for navigation, dialogs, snackbars, and other fire-and-forget UI actions that don't belong in `State`.
+An extension of [bloc](https://pub.dev/packages/bloc) that adds a one-shot UI side-effect stream alongside state — for navigation, dialogs, snackbars, and other fire-and-forget UI actions that don't belong in `State`.
 
 - **Bloc** decides *what* happened: `emitEffect(ShowErrorDialog('Save failed'))`
 - **UI** decides *how* to show it: `showDialog(context: context, ...)`
@@ -8,7 +8,7 @@ An extension of [bloc](https://pub.dev/packages/bloc) that adds a one-shot UI ef
 ## Install
 
 ```bash
-flutter pub add effect_bloc
+flutter pub add bloc_after_effect
 ```
 
 ## Usage
@@ -71,7 +71,7 @@ The `effects` stream is a broadcast stream: effects emitted with no active liste
 
 ## Documentation & example
 
-- Full documentation: [doc/effect_bloc.md](doc/effect_bloc.md)
+- Full documentation: [doc/bloc_after_effect.md](doc/bloc_after_effect.md)
 - Runnable example: [example/](example/)
 
 ## License

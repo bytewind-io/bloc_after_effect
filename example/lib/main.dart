@@ -1,4 +1,4 @@
-import 'package:effect_bloc/effect_bloc.dart';
+import 'package:bloc_after_effect/bloc_after_effect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

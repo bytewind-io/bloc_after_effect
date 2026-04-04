@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:effect_bloc/effect_bloc.dart';
+import 'package:bloc_after_effect/bloc_after_effect.dart';
 
 // --- Test bloc that exposes emitEffect publicly for testing ---
 

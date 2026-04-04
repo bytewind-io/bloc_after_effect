@@ -1,15 +1,15 @@
-name: effect_bloc
+name: bloc_after_effect
 description: >-
-  An extension of Bloc that adds a one-shot UI effect stream alongside state,
-  for navigation, dialogs, snackbars, and other fire-and-forget UI actions.
+  An extension of Bloc that adds a one-shot UI side-effect stream alongside
+  state, for navigation, dialogs, snackbars, and other fire-and-forget actions.
 version: 0.1.0
-repository: https://github.com/bytewind-io/effect_bloc
-issue_tracker: https://github.com/bytewind-io/effect_bloc/issues
+repository: https://github.com/bytewind-io/bloc_after_effect
+issue_tracker: https://github.com/bytewind-io/bloc_after_effect/issues
 topics:
   - bloc
   - flutter-bloc
   - state-management
-  - effects
+  - side-effects
 
 environment:
   sdk: '>=2.17.0 <4.0.0'

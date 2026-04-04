@@ -1,5 +1,5 @@
-name: effect_bloc_example
-description: Example app demonstrating effect_bloc usage.
+name: bloc_after_effect_example
+description: Example app demonstrating bloc_after_effect usage.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_bloc: ^8.1.0
-  effect_bloc:
+  bloc_after_effect:
     path: ../
 
 dev_dependencies:

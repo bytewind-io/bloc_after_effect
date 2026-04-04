@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:effect_bloc/effect_bloc.dart';
+import 'package:bloc_after_effect/bloc_after_effect.dart';
 
 // --- Test events, states, effects ---
 
