@@ -57,6 +57,53 @@ BlocEffectListener<ProfileBloc, ProfileEffect>(
 
 If `bloc` is not passed explicitly, it is resolved via `context.read<B>()`, so it works with `BlocProvider` out of the box.
 
+## BlocEffectConsumer — state + effects in one widget
+
+`BlocEffectConsumer` combines `BlocBuilder`, an optional state listener, and an optional effect listener into a single widget. Use it when you need to rebuild the UI from state **and** react to effects:
+
+```dart
+BlocEffectConsumer<ProfileBloc, ProfileState, ProfileEffect>(
+  effectListener: (context, effect) {
+    if (effect is NavigateToEdit) Navigator.of(context).push(...);
+  },
+  listener: (context, state) {                           // optional
+    if (state.error != null) logger.error(state.error);
+  },
+  listenWhen: (prev, curr) => prev.error != curr.error,  // optional
+  buildWhen: (prev, curr) => prev.profile != curr.profile, // optional
+  builder: (context, state) => ProfileView(state: state),
+)
+```
+
+Only `builder` is required. Drop `effectListener` if you only need state; drop `listener` if you only need effects — unlike `flutter_bloc`'s `BlocConsumer`, the state listener is optional.
+
+### Migrating from `BlocConsumer`
+
+If you currently wrap `BlocConsumer` with `BlocEffectListener`, collapse them into one widget:
+
+```dart
+// Before
+BlocEffectListener<CounterBloc, CounterEffect>(
+  listener: (context, effect) { /* show snackbar */ },
+  child: BlocConsumer<CounterBloc, CounterState>(
+    listener: (context, state) { /* log */ },
+    builder: (context, state) => CounterView(state: state),
+  ),
+)
+
+// After
+BlocEffectConsumer<CounterBloc, CounterState, CounterEffect>(
+  effectListener: (context, effect) { /* show snackbar */ },
+  listener: (context, state) { /* log */ },
+  builder: (context, state) => CounterView(state: state),
+)
+```
+
+Migration steps:
+1. Replace `BlocConsumer<B, S>` with `BlocEffectConsumer<B, S, E>` (add the Effect type parameter).
+2. Unwrap the surrounding `BlocEffectListener` — move its `listener` into `effectListener`.
+3. `buildWhen` / `listenWhen` carry over unchanged.
+
 ## State vs Effect
 
 | | State | Effect |

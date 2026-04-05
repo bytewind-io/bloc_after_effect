@@ -53,6 +53,26 @@ Parameters:
 - `child` (required) — child widget
 - `bloc` (optional) — if omitted, resolved via `context.read<B>()`
 
+### BlocEffectConsumer
+
+A widget that combines `BlocBuilder` with an optional state listener and an optional effect listener. Use it instead of nesting `BlocEffectListener` around `BlocConsumer` when you need state + effects in one place.
+
+```dart
+class BlocEffectConsumer<B extends EffectBloc<dynamic, S, E>, S, E>
+```
+
+Parameters:
+- `builder` (required) — `Widget Function(BuildContext context, S state)`
+- `listener` (optional) — `void Function(BuildContext context, S state)` — state listener
+- `effectListener` (optional) — `void Function(BuildContext context, E effect)`
+- `bloc` (optional) — if omitted, resolved via `context.read<B>()`
+- `buildWhen` (optional) — `bool Function(S previous, S current)` filter for rebuilds
+- `listenWhen` (optional) — `bool Function(S previous, S current)` filter for state listener
+
+Key differences from `flutter_bloc`'s `BlocConsumer`:
+- **State `listener` is optional** (required in `BlocConsumer`)
+- **Adds optional `effectListener`** for the `effects` stream
+
 ---
 
 ## Usage
@@ -126,6 +146,62 @@ BlocEffectListener<ProfileBloc, ProfileEffect>(
   child: ProfilePageBody(),
 )
 ```
+
+---
+
+## Migrating from BlocConsumer
+
+If you currently wrap `flutter_bloc`'s `BlocConsumer` inside a `BlocEffectListener`, collapse the two widgets into a single `BlocEffectConsumer`.
+
+### Before
+
+```dart
+BlocEffectListener<CounterBloc, CounterEffect>(
+  listener: (context, effect) {
+    if (effect is ShowSavedSnackBar) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved! ${effect.count}')),
+      );
+    }
+  },
+  child: BlocConsumer<CounterBloc, CounterState>(
+    listener: (context, state) {
+      if (state.error != null) logger.error(state.error);
+    },
+    listenWhen: (prev, curr) => prev.error != curr.error,
+    buildWhen: (prev, curr) => prev.count != curr.count,
+    builder: (context, state) => CounterView(state: state),
+  ),
+)
+```
+
+### After
+
+```dart
+BlocEffectConsumer<CounterBloc, CounterState, CounterEffect>(
+  effectListener: (context, effect) {
+    if (effect is ShowSavedSnackBar) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved! ${effect.count}')),
+      );
+    }
+  },
+  listener: (context, state) {
+    if (state.error != null) logger.error(state.error);
+  },
+  listenWhen: (prev, curr) => prev.error != curr.error,
+  buildWhen: (prev, curr) => prev.count != curr.count,
+  builder: (context, state) => CounterView(state: state),
+)
+```
+
+### Checklist
+
+1. Replace `BlocConsumer<B, S>` with `BlocEffectConsumer<B, S, E>` — add the Effect type parameter.
+2. Unwrap the surrounding `BlocEffectListener` — move its `listener` into `effectListener`.
+3. If you don't need effects, drop `effectListener`.
+4. If you don't need the state listener, drop `listener` — it's optional here (unlike `BlocConsumer`).
+5. `buildWhen` and `listenWhen` carry over unchanged.
 
 ---
 

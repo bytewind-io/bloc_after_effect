@@ -95,58 +95,56 @@ class CounterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocEffectListener<CounterBloc, CounterEffect>(
-      listener: (context, effect) {
-        if (effect is ShowSavedSnackBar) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Saved! Count was ${effect.count}')),
-          );
-        } else if (effect is ShowErrorDialog) {
-          showDialog<void>(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Error'),
-              content: Text(effect.message),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('EffectBloc Example')),
-        body: Center(
-          child: BlocBuilder<CounterBloc, CounterState>(
-            builder: (context, state) {
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '${state.count}',
-                    style: Theme.of(context).textTheme.displayLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  if (state.isSaving)
-                    const CircularProgressIndicator()
-                  else
-                    FilledButton(
-                      onPressed: () =>
-                          context.read<CounterBloc>().add(SavePressed()),
-                      child: const Text('Save'),
-                    ),
-                ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('EffectBloc Example')),
+      body: Center(
+        child: BlocEffectConsumer<CounterBloc, CounterState, CounterEffect>(
+          effectListener: (context, effect) {
+            if (effect is ShowSavedSnackBar) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Saved! Count was ${effect.count}')),
               );
-            },
-          ),
+            } else if (effect is ShowErrorDialog) {
+              showDialog<void>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Error'),
+                  content: Text(effect.message),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${state.count}',
+                  style: Theme.of(context).textTheme.displayLarge,
+                ),
+                const SizedBox(height: 16),
+                if (state.isSaving)
+                  const CircularProgressIndicator()
+                else
+                  FilledButton(
+                    onPressed: () =>
+                        context.read<CounterBloc>().add(SavePressed()),
+                    child: const Text('Save'),
+                  ),
+              ],
+            );
+          },
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => context.read<CounterBloc>().add(Increment()),
-          child: const Icon(Icons.add),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.read<CounterBloc>().add(Increment()),
+        child: const Icon(Icons.add),
       ),
     );
   }
