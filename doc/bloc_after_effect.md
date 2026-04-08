@@ -42,7 +42,7 @@ Adds:
 
 ### BlocEffectListener
 
-A widget that subscribes to `effects` and invokes a callback for each effect.
+A widget that subscribes to `effects` and invokes a callback for each effect. Does not rebuild the UI — just wraps a child widget.
 
 ```dart
 class BlocEffectListener<B extends EffectBloc<dynamic, dynamic, E>, E>
@@ -53,9 +53,38 @@ Parameters:
 - `child` (required) — child widget
 - `bloc` (optional) — if omitted, resolved via `context.read<B>()`
 
-### BlocEffectConsumer
+Lifecycle:
+1. Subscribes to `effects` in `didChangeDependencies`
+2. On each effect, `listener` is invoked (only if the widget is `mounted`)
+3. On widget `dispose`, the subscription is cancelled
+4. Re-subscribes when the bloc identity changes (in `didUpdateWidget`)
 
-A widget that combines `BlocBuilder` with an optional state listener and an optional effect listener. Use it instead of nesting `BlocEffectListener` around `BlocConsumer` when you need state + effects in one place.
+### BlocEffectBuilder
+
+A widget that combines `BlocBuilder` with an effect listener. Rebuilds the UI from state and reacts to effects. This is the primary widget for most use cases.
+
+```dart
+class BlocEffectBuilder<B extends EffectBloc<dynamic, S, E>, S, E>
+```
+
+Parameters:
+- `builder` (required) — `Widget Function(BuildContext context, S state)`
+- `effectListener` (required) — `void Function(BuildContext context, E effect)`
+- `bloc` (optional) — if omitted, resolved via `context.read<B>()`
+- `buildWhen` (optional) — `bool Function(S previous, S current)` filter for rebuilds
+
+Lifecycle:
+1. Subscribes to `effects` in `didChangeDependencies`
+2. On each effect, `effectListener` is invoked (only if `mounted`)
+3. State changes trigger `BlocBuilder` rebuilds (filtered by `buildWhen`)
+4. Re-subscribes to effects when the bloc identity changes
+5. Unsubscribes on `dispose`
+
+### BlocEffectConsumer (migration only)
+
+> **Not recommended for new code.** Use `BlocEffectBuilder` instead.
+
+A migration helper that combines `BlocBuilder` with an optional state listener and an optional effect listener. Use it when gradually transitioning from `flutter_bloc`'s `BlocConsumer` — it lets you keep the existing state listener while you move one-shot side-effects into proper Effects one callback at a time. Once migration is complete, replace with `BlocEffectBuilder`.
 
 ```dart
 class BlocEffectConsumer<B extends EffectBloc<dynamic, S, E>, S, E>
@@ -125,6 +154,8 @@ class ProfileBloc extends EffectBloc<ProfileEvent, ProfileState, ProfileEffect> 
 
 ### 3. Wire it into the UI
 
+**BlocEffectListener** — only effects, no building:
+
 ```dart
 BlocEffectListener<ProfileBloc, ProfileEffect>(
   listener: (context, effect) {
@@ -147,15 +178,94 @@ BlocEffectListener<ProfileBloc, ProfileEffect>(
 )
 ```
 
----
-
-## Migrating from BlocConsumer
-
-If you currently wrap `flutter_bloc`'s `BlocConsumer` inside a `BlocEffectListener`, collapse the two widgets into a single `BlocEffectConsumer`.
-
-### Before
+**BlocEffectBuilder** — build from state + handle effects:
 
 ```dart
+BlocEffectBuilder<ProfileBloc, ProfileState, ProfileEffect>(
+  effectListener: (context, effect) {
+    if (effect is ShowErrorDialog) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(content: Text(effect.message)),
+      );
+    }
+  },
+  buildWhen: (prev, curr) => prev.isSaving != curr.isSaving,
+  builder: (context, state) {
+    if (state.isSaving) return const CircularProgressIndicator();
+    return ProfileView(state: state);
+  },
+)
+```
+
+**BlocEffectConsumer** — build + state listener + effects (migration only, not for new code):
+
+```dart
+BlocEffectConsumer<ProfileBloc, ProfileState, ProfileEffect>(
+  effectListener: (context, effect) {
+    if (effect is NavigateToEdit) Navigator.of(context).push(...);
+  },
+  listener: (context, state) {
+    if (state.error != null) logger.error(state.error);
+  },
+  listenWhen: (prev, curr) => prev.error != curr.error,
+  builder: (context, state) => ProfileView(state: state),
+)
+```
+
+---
+
+## Migration from flutter_bloc
+
+### From BlocBuilder
+
+Replace `BlocBuilder` with `BlocEffectBuilder` and add an `effectListener`:
+
+```dart
+// Before
+BlocBuilder<CounterBloc, CounterState>(
+  builder: (context, state) => CounterView(state: state),
+)
+
+// After
+BlocEffectBuilder<CounterBloc, CounterState, CounterEffect>(
+  effectListener: (context, effect) { /* handle effects */ },
+  builder: (context, state) => CounterView(state: state),
+)
+```
+
+### From BlocListener + BlocBuilder
+
+Move one-shot side-effects from the state listener into proper Effects:
+
+```dart
+// Before
+BlocListener<CounterBloc, CounterState>(
+  listener: (context, state) {
+    if (state.saved) ScaffoldMessenger.of(context).showSnackBar(...);
+  },
+  child: BlocBuilder<CounterBloc, CounterState>(
+    builder: (context, state) => CounterView(state: state),
+  ),
+)
+
+// After
+BlocEffectBuilder<CounterBloc, CounterState, CounterEffect>(
+  effectListener: (context, effect) {
+    if (effect is ShowSavedSnackBar) {
+      ScaffoldMessenger.of(context).showSnackBar(...);
+    }
+  },
+  builder: (context, state) => CounterView(state: state),
+)
+```
+
+### From BlocConsumer (gradual migration)
+
+If you still need a state listener during migration, temporarily use `BlocEffectConsumer`. Once all one-shot side-effects have been moved to Effects, replace it with `BlocEffectBuilder`:
+
+```dart
+// Before
 BlocEffectListener<CounterBloc, CounterEffect>(
   listener: (context, effect) {
     if (effect is ShowSavedSnackBar) {
@@ -173,11 +283,8 @@ BlocEffectListener<CounterBloc, CounterEffect>(
     builder: (context, state) => CounterView(state: state),
   ),
 )
-```
 
-### After
-
-```dart
+// After
 BlocEffectConsumer<CounterBloc, CounterState, CounterEffect>(
   effectListener: (context, effect) {
     if (effect is ShowSavedSnackBar) {
@@ -239,14 +346,14 @@ If the UI must *do it once* — it's an Effect.
 
 ## Bloc lookup
 
-If `bloc` is not passed to `BlocEffectListener`, it's resolved via `context.read<B>()` from `flutter_bloc`. This works when the Bloc is provided via `BlocProvider`:
+If `bloc` is not passed to any of the widgets, it's resolved via `context.read<B>()` from `flutter_bloc`. This works when the Bloc is provided via `BlocProvider`:
 
 ```dart
 BlocProvider(
   create: (_) => ProfileBloc(repo),
-  child: BlocEffectListener<ProfileBloc, ProfileEffect>(
-    listener: (context, effect) { ... },
-    child: ProfilePageBody(),
+  child: BlocEffectBuilder<ProfileBloc, ProfileState, ProfileEffect>(
+    effectListener: (context, effect) { ... },
+    builder: (context, state) => ProfilePageBody(state: state),
   ),
 )
 ```
@@ -254,10 +361,10 @@ BlocProvider(
 If the Bloc is created outside the widget tree, pass it explicitly:
 
 ```dart
-BlocEffectListener<ProfileBloc, ProfileEffect>(
+BlocEffectBuilder<ProfileBloc, ProfileState, ProfileEffect>(
   bloc: myBloc,
-  listener: (context, effect) { ... },
-  child: ProfilePageBody(),
+  effectListener: (context, effect) { ... },
+  builder: (context, state) => ProfilePageBody(state: state),
 )
 ```
 
@@ -265,10 +372,24 @@ BlocEffectListener<ProfileBloc, ProfileEffect>(
 
 ## Lifecycle
 
-1. `BlocEffectListener` subscribes to `effects` in `didChangeDependencies`
+### BlocEffectListener
+1. Subscribes to `effects` in `didChangeDependencies`
 2. On each effect, `listener` is invoked (only if the widget is `mounted`)
 3. On widget `dispose`, the subscription is cancelled
 4. On Bloc `close()`, the `StreamController` is closed, then `super.close()`
+
+### BlocEffectBuilder
+1. Subscribes to `effects` in `didChangeDependencies`
+2. On each effect, `effectListener` is invoked (only if `mounted`)
+3. State changes trigger `BlocBuilder` rebuilds (filtered by `buildWhen`)
+4. Re-subscribes when bloc identity changes
+5. On widget `dispose`, the effect subscription is cancelled
+
+### BlocEffectConsumer
+1. Subscribes to `effects` in `didChangeDependencies` (if `effectListener` provided)
+2. State changes trigger both `listener` (filtered by `listenWhen`) and `builder` rebuilds (filtered by `buildWhen`)
+3. Re-subscribes when bloc identity changes or `effectListener` reference changes
+4. On widget `dispose`, all subscriptions are cancelled
 
 ---
 
@@ -282,15 +403,18 @@ BlocEffectListener<ProfileBloc, ProfileEffect>(
 ## Package structure
 
 ```
-packages/effect_bloc/
-  lib/
-    effect_bloc.dart              # barrel export
-    src/
-      effect_bloc.dart            # EffectBloc base class
-      bloc_effect_listener.dart   # BlocEffectListener widget
-  test/
-    effect_bloc_test.dart         # unit tests
-    bloc_effect_listener_test.dart # widget tests
-  example/
-    lib/main.dart                 # Counter app with effects
+lib/
+  bloc_after_effect.dart              # barrel export
+  src/
+    effect_bloc.dart                  # EffectBloc base class
+    bloc_effect_listener.dart         # BlocEffectListener widget
+    bloc_effect_builder.dart          # BlocEffectBuilder widget
+    bloc_effect_consumer.dart         # BlocEffectConsumer widget (legacy migration)
+test/
+  effect_bloc_test.dart               # unit tests
+  bloc_effect_listener_test.dart      # widget tests
+  bloc_effect_builder_test.dart       # widget tests
+  bloc_effect_consumer_test.dart      # widget tests
+example/
+  lib/main.dart                       # Counter app with effects
 ```

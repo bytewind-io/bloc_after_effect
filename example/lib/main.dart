@@ -98,7 +98,7 @@ class CounterPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('EffectBloc Example')),
       body: Center(
-        child: BlocEffectConsumer<CounterBloc, CounterState, CounterEffect>(
+        child: BlocEffectBuilder<CounterBloc, CounterState, CounterEffect>(
           effectListener: (context, effect) {
             if (effect is ShowSavedSnackBar) {
               ScaffoldMessenger.of(context).showSnackBar(

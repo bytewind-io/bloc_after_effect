@@ -36,7 +36,11 @@ class ProfileBloc extends EffectBloc<ProfileEvent, ProfileState, ProfileEffect> 
 }
 ```
 
-Listen for effects in the widget tree with `BlocEffectListener`:
+## Widgets
+
+### BlocEffectListener
+
+Subscribes to `EffectBloc.effects` and calls a callback for each effect. Does not build any UI — just wraps a `child`.
 
 ```dart
 BlocEffectListener<ProfileBloc, ProfileEffect>(
@@ -55,11 +59,36 @@ BlocEffectListener<ProfileBloc, ProfileEffect>(
 )
 ```
 
-If `bloc` is not passed explicitly, it is resolved via `context.read<B>()`, so it works with `BlocProvider` out of the box.
+Parameters:
+- `listener` (required) — `void Function(BuildContext, E)` callback per effect
+- `child` (required) — child widget
+- `bloc` (optional) — if omitted, resolved via `context.read<B>()`
 
-## BlocEffectConsumer — state + effects in one widget
+### BlocEffectBuilder
 
-`BlocEffectConsumer` combines `BlocBuilder`, an optional state listener, and an optional effect listener into a single widget. Use it when you need to rebuild the UI from state **and** react to effects:
+Combines `BlocBuilder` with an effect listener. Rebuilds the UI from state **and** reacts to effects. This is the main widget for most use cases.
+
+```dart
+BlocEffectBuilder<ProfileBloc, ProfileState, ProfileEffect>(
+  effectListener: (context, effect) {
+    if (effect is NavigateToEdit) Navigator.of(context).push(...);
+  },
+  buildWhen: (prev, curr) => prev.profile != curr.profile,
+  builder: (context, state) => ProfileView(state: state),
+)
+```
+
+Parameters:
+- `builder` (required) — `Widget Function(BuildContext, S)` builds UI from state
+- `effectListener` (required) — `void Function(BuildContext, E)` callback per effect
+- `bloc` (optional) — if omitted, resolved via `context.read<B>()`
+- `buildWhen` (optional) — filter for rebuilds
+
+### BlocEffectConsumer (migration only)
+
+> **Not recommended for new code.** Use `BlocEffectBuilder` instead.
+
+A migration helper that combines `BlocBuilder`, an optional state listener, and an optional effect listener into a single widget. Use it when gradually transitioning from `flutter_bloc`'s `BlocConsumer` to effects — it lets you keep the existing state listener while you move one-shot side-effects into proper Effects one callback at a time.
 
 ```dart
 BlocEffectConsumer<ProfileBloc, ProfileState, ProfileEffect>(
@@ -75,11 +104,62 @@ BlocEffectConsumer<ProfileBloc, ProfileState, ProfileEffect>(
 )
 ```
 
-Only `builder` is required. Drop `effectListener` if you only need state; drop `listener` if you only need effects — unlike `flutter_bloc`'s `BlocConsumer`, the state listener is optional.
+Parameters:
+- `builder` (required) — `Widget Function(BuildContext, S)` builds UI from state
+- `listener` (optional) — `void Function(BuildContext, S)` state change callback
+- `effectListener` (optional) — `void Function(BuildContext, E)` callback per effect
+- `bloc` (optional) — if omitted, resolved via `context.read<B>()`
+- `buildWhen` (optional) — filter for rebuilds
+- `listenWhen` (optional) — filter for state listener
 
-### Migrating from `BlocConsumer`
+## Migration from flutter_bloc
 
-If you currently wrap `BlocConsumer` with `BlocEffectListener`, collapse them into one widget:
+### From `BlocBuilder`
+
+If you only need to add effect handling to an existing `BlocBuilder`, use `BlocEffectBuilder`:
+
+```dart
+// Before
+BlocBuilder<CounterBloc, CounterState>(
+  builder: (context, state) => CounterView(state: state),
+)
+
+// After
+BlocEffectBuilder<CounterBloc, CounterState, CounterEffect>(
+  effectListener: (context, effect) { /* handle effects */ },
+  builder: (context, state) => CounterView(state: state),
+)
+```
+
+### From `BlocListener` + `BlocBuilder`
+
+Replace the pair with a single `BlocEffectBuilder` and move one-shot side-effects from the state listener into `effectListener`:
+
+```dart
+// Before
+BlocListener<CounterBloc, CounterState>(
+  listener: (context, state) {
+    if (state.saved) ScaffoldMessenger.of(context).showSnackBar(...);
+  },
+  child: BlocBuilder<CounterBloc, CounterState>(
+    builder: (context, state) => CounterView(state: state),
+  ),
+)
+
+// After — side-effects are now proper Effects, not state
+BlocEffectBuilder<CounterBloc, CounterState, CounterEffect>(
+  effectListener: (context, effect) {
+    if (effect is ShowSavedSnackBar) {
+      ScaffoldMessenger.of(context).showSnackBar(...);
+    }
+  },
+  builder: (context, state) => CounterView(state: state),
+)
+```
+
+### From `BlocConsumer` (gradual migration)
+
+If you still need a state listener during migration, temporarily use `BlocEffectConsumer`. Once all one-shot side-effects have been moved to Effects, replace it with `BlocEffectBuilder`:
 
 ```dart
 // Before

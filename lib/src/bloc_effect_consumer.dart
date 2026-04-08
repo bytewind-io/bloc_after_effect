@@ -9,12 +9,14 @@ import 'effect_bloc.dart';
 /// A widget that combines [BlocBuilder], a state listener, and an effect
 /// listener for an [EffectBloc] into a single widget.
 ///
+/// **Deprecated for new code.** This widget exists to ease migration from
+/// `flutter_bloc`'s `BlocConsumer`. It lets you gradually adopt effects while
+/// keeping the existing state listener, so you can transition one callback at
+/// a time. For new code, use [BlocEffectBuilder] instead.
+///
 /// Unlike `flutter_bloc`'s `BlocConsumer`:
 ///  - [listener] (state listener) is optional
 ///  - [effectListener] is an additional optional listener for the effect stream
-///
-/// At least one of [listener], [effectListener], or a reactive [builder] is
-/// typically used; [builder] is always required.
 ///
 /// ```dart
 /// BlocEffectConsumer<ProfileBloc, ProfileState, ProfileEffect>(

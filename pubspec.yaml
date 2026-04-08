@@ -2,7 +2,7 @@ name: bloc_after_effect
 description: >-
   An extension of Bloc that adds a one-shot UI side-effect stream alongside
   state, for navigation, dialogs, snackbars, and other fire-and-forget actions.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/bytewind-io/bloc_after_effect
 issue_tracker: https://github.com/bytewind-io/bloc_after_effect/issues
 topics:

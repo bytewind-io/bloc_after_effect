@@ -1,3 +1,9 @@
+## 0.3.0
+
+* Added `BlocEffectBuilder<B, S, E>` — combines `BlocBuilder` with an effect listener. Rebuilds UI from state and reacts to effects without a state listener. The primary widget for most use cases.
+* Updated documentation: described all widgets (`BlocEffectListener`, `BlocEffectBuilder`, `BlocEffectConsumer`) with migration guides from `BlocBuilder`, `BlocListener`, and `BlocConsumer`.
+* Example app migrated to `BlocEffectBuilder`.
+
 ## 0.2.0
 
 * Added `BlocEffectConsumer<B, S, E>` — combines `BlocBuilder` with an optional state `listener` and an optional `effectListener` in a single widget. Parallels `flutter_bloc`'s `BlocConsumer`, but the state listener is optional and an effect listener is added.
